@@ -31,12 +31,12 @@ try {
     $order->total_amount = $order_details['total_amount'];
     $order->status = 'pending'; // Initial status
 
-    $orderId = $orderRepo->createOrderWithItems($order, $order_details['items']);
+    $paymentReference = $orderRepo->createOrderWithItems($order, $order_details['items']);
 
-    if ($orderId) {
+    if ($paymentReference) {
         // Success, clear the session data and redirect to confirmation
         unset($_SESSION['order_details']);
-        header("Location: order-confirmation.php?order_id=" . $orderId);
+        header("Location: order-confirmation.php?ref=" . $paymentReference);
         exit;
     } else {
         throw new Exception("Failed to create the order in the database.");

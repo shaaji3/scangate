@@ -1,0 +1,7 @@
+{
+    "name": "ticketing/online-ticketing-system",
+    "description": "An online event ticketing system.",
+    "require": {
+        "paystack/paystack-php": "2.*"
+    }
+}

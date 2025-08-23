@@ -10,12 +10,14 @@ class OrderRepository {
     }
 
     /**
-     * Creates a new order and its associated items in a transaction.
+     * Creates a new order, its items, and a payment record in a transaction.
      * @param Order $order The order object.
      * @param array $items An array of items, each with 'ticket_id', 'quantity', and 'price'.
-     * @return int|false The new order ID on success, false on failure.
+     * @return string|false The new payment reference on success, false on failure.
      */
     public function createOrderWithItems(Order $order, array $items) {
+        $paymentReference = 'ref_' . uniqid() . bin2hex(random_bytes(4)); // Generate a more unique reference
+
         try {
             $this->pdo->beginTransaction();
 
@@ -44,15 +46,22 @@ class OrderRepository {
                 $stmtItem->execute();
             }
 
-            // Step 3: (Optional but good practice) Update ticket quantities
-            // This is complex and can be added later. For now, we assume infinite tickets.
+            // Step 3: Create the payment record
+            $sqlPayment = "INSERT INTO payments (order_id, reference, method, status)
+                           VALUES (:order_id, :reference, :method, :status)";
+            $stmtPayment = $this->pdo->prepare($sqlPayment);
+            $stmtPayment->bindValue(':order_id', $orderId);
+            $stmtPayment->bindValue(':reference', $paymentReference);
+            $stmtPayment->bindValue(':method', 'paystack'); // Default method
+            $stmtPayment->bindValue(':status', 'pending'); // Initial status
+            $stmtPayment->execute();
 
             $this->pdo->commit();
-            return $orderId;
+            return $paymentReference;
 
         } catch (Exception $e) {
             $this->pdo->rollBack();
-            // In a real app, log the error: error_log($e->getMessage());
+            error_log($e->getMessage()); // Log the actual error
             return false;
         }
     }
@@ -68,5 +77,33 @@ class OrderRepository {
         $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_CLASS, 'Order');
+    }
+
+    /**
+     * Finds an order by its ID.
+     * @param int $order_id The order ID.
+     * @return Order|false The Order object if found, false otherwise.
+     */
+    public function findOrderById($order_id) {
+        $sql = "SELECT * FROM orders WHERE id = :order_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':order_id', $order_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $stmt->setFetchMode(PDO::FETCH_CLASS, 'Order');
+        return $stmt->fetch();
+    }
+
+    /**
+     * Updates the status of an order.
+     * @param int $order_id The order ID.
+     * @param string $status The new status.
+     * @return bool True on success, false on failure.
+     */
+    public function updateOrderStatus($order_id, $status) {
+        $sql = "UPDATE orders SET status = :status WHERE id = :order_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':status', $status);
+        $stmt->bindValue(':order_id', $order_id);
+        return $stmt->execute();
     }
 }
