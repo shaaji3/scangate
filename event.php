@@ -1,32 +1,36 @@
 <?php
 // event.php - Displays the details for a single event.
 
+session_start();
+
 // Include necessary files
 require_once 'config/database.php';
 require_once 'repositories/EventRepository.php';
+require_once 'repositories/TicketRepository.php';
 
 // 1. Get and validate the event ID from the URL
 $event_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$event_id) {
-    // Optional: Redirect to a 404 page or the index page
     header("Location: index.php");
     exit;
 }
 
-// 2. Fetch the event from the database
+// 2. Fetch the event and tickets from the database
 try {
     $eventRepo = new EventRepository($pdo);
     $event = $eventRepo->findEventById($event_id);
+
+    $ticketRepo = new TicketRepository($pdo);
+    $tickets = $ticketRepo->findTicketsByEventId($event_id);
 } catch (Exception $e) {
-    // In a real app, log this error
     $event = null;
+    $tickets = [];
 }
 
 // 3. If event not found, display an error message
 if (!$event) {
     http_response_code(404);
     $pageTitle = "Event Not Found";
-    // A simple 404 message. You could also include a dedicated 404 view.
     $pageContent = "<h1>404 - Event Not Found</h1><p>Sorry, the event you are looking for does not exist.</p><a href='index.php'>Go back to events list</a>";
 } else {
     $pageTitle = htmlspecialchars($event->title);
@@ -46,7 +50,10 @@ if (!$event) {
         .container { max-width: 800px; margin: 20px auto; background-color: white; padding: 20px; border-radius: 5px; }
         .event-banner { width: 100%; height: 300px; object-fit: cover; border-radius: 5px; }
         .event-details h1 { margin-top: 20px; }
-        .btn-buy { background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 1.2em; display: inline-block; margin-top: 20px; }
+        .tickets-section { margin-top: 30px; }
+        .ticket-type { display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; }
+        .ticket-type input { width: 60px; text-align: center; }
+        .btn-checkout { background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 1.2em; display: inline-block; margin-top: 20px; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -66,8 +73,30 @@ if (!$event) {
                 <hr>
                 <h3>About this event</h3>
                 <p><?php echo nl2br(htmlspecialchars($event->description)); ?></p>
-                <hr>
-                <a href="checkout.php?event_id=<?php echo $event->id; ?>" class="btn-buy">Buy Ticket</a>
+            </div>
+
+            <div class="tickets-section">
+                <h3>Get Your Tickets</h3>
+                <?php if (!empty($tickets)): ?>
+                    <form action="checkout.php" method="POST">
+                        <input type="hidden" name="event_id" value="<?php echo $event->id; ?>">
+                        <?php foreach ($tickets as $ticket): ?>
+                            <div class="ticket-type">
+                                <div>
+                                    <strong><?php echo htmlspecialchars($ticket->name); ?></strong><br>
+                                    <span>$<?php echo htmlspecialchars(number_format($ticket->price, 2)); ?></span>
+                                </div>
+                                <div>
+                                    <label for="ticket_<?php echo $ticket->id; ?>">Quantity:</label>
+                                    <input type="number" id="ticket_<?php echo $ticket->id; ?>" name="tickets[<?php echo $ticket->id; ?>]" min="0" max="<?php echo $ticket->quantity; ?>" value="0">
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <button type="submit" class="btn-checkout">Proceed to Checkout</button>
+                    </form>
+                <?php else: ?>
+                    <p>Tickets for this event are not yet available. Please check back soon.</p>
+                <?php endif; ?>
             </div>
         <?php else: ?>
             <?php echo $pageContent; ?>
