@@ -5,10 +5,10 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
-
-require_once 'config/database.php';
-require_once 'repositories/PaymentRepository.php';
-require_once 'repositories/OrderRepository.php';
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/repositories/PaymentRepository.php';
+require_once __DIR__ . '/repositories/OrderRepository.php';
 
 $reference = filter_input(INPUT_GET, 'ref', FILTER_SANITIZE_STRING);
 if (!$reference) {

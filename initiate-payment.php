@@ -13,12 +13,12 @@ if (file_exists('vendor/autoload.php')) {
     // Fallback or error if the vendor directory doesn't exist
     die("Composer dependencies not installed. Please run 'composer install'.");
 }
-
-require_once 'config/config.php';
-require_once 'config/database.php';
-require_once 'repositories/PaymentRepository.php';
-require_once 'repositories/OrderRepository.php';
-require_once 'repositories/UserRepository.php';
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/repositories/PaymentRepository.php';
+require_once __DIR__ . '/repositories/OrderRepository.php';
+require_once __DIR__ . '/repositories/UserRepository.php';
 
 $reference = filter_input(INPUT_GET, 'ref', FILTER_SANITIZE_STRING);
 if (!$reference) {

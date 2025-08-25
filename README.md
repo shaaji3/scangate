@@ -116,6 +116,7 @@ project-root/
 ├── migrations/           # SQL migration files
 ├── repositories/         # Database interaction logic (UserRepository, etc.)
 ├── utils/                # Helper utilities (EmailSender, PDFGenerator, etc.)
+├── handles/              # page helper scripts (handles*. login, register, create-event etc)
 ├── upload/               # Directory for user-uploaded content
 │   ├── banners/          # Event banners
 │   └── qrcodes/          # Generated QR code images

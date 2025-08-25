@@ -6,10 +6,10 @@ if (!isset($_SESSION["user_id"]) || $_SESSION['user_role'] !== 'planner') {
     header("Location: login.php");
     exit;
 }
-
-require_once 'config/database.php';
-require_once 'repositories/UserRepository.php';
-require_once 'utils/CSRF.php';
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/repositories/UserRepository.php';
+require_once __DIR__ . '/utils/CSRF.php';
 
 $userRepo = new UserRepository($pdo);
 $team_members = $userRepo->findTeamMembersByPlannerId($_SESSION['user_id']);

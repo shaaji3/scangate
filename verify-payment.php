@@ -7,10 +7,10 @@ if (file_exists('vendor/autoload.php')) {
 } else {
     die("Composer dependencies not installed.");
 }
-
-require_once 'config/config.php';
-require_once 'config/database.php';
-require_once 'repositories/PaymentRepository.php';
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ .'/config/config.php';
+require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/repositories/PaymentRepository.php';
 
 $reference = filter_input(INPUT_GET, 'reference', FILTER_SANITIZE_STRING);
 if (!$reference) {

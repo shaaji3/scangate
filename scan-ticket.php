@@ -6,10 +6,10 @@ if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit;
 }
-
-require_once 'config/database.php';
-require_once 'repositories/EventRepository.php';
-require_once 'utils/AuthGuard.php';
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ .'/config/database.php';
+require_once __DIR__ . '/repositories/EventRepository.php';
+require_once __DIR__ . '/utils/AuthGuard.php';
 
 // Get event ID from URL and validate it
 $event_id = filter_input(INPUT_GET, 'event_id', FILTER_VALIDATE_INT);
