@@ -84,6 +84,25 @@ class PaymentRepository {
             $orderRepo = new OrderRepository($this->pdo);
             $orderRepo->updateOrderStatus($payment->order_id, 'paid');
 
+            // 4. Create the individual issued_tickets records
+            $sqlItems = "SELECT * FROM order_items WHERE order_id = :order_id";
+            $stmtItems = $this->pdo->prepare($sqlItems);
+            $stmtItems->bindValue(':order_id', $payment->order_id);
+            $stmtItems->execute();
+            $orderItems = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+
+            $sqlIssue = "INSERT INTO issued_tickets (order_item_id, ticket_code) VALUES (:order_item_id, :ticket_code)";
+            $stmtIssue = $this->pdo->prepare($sqlIssue);
+
+            foreach ($orderItems as $item) {
+                for ($i = 0; $i < $item['quantity']; $i++) {
+                    $ticketCode = 'TKT-' . strtoupper(bin2hex(random_bytes(8)));
+                    $stmtIssue->bindValue(':order_item_id', $item['id']);
+                    $stmtIssue->bindValue(':ticket_code', $ticketCode);
+                    $stmtIssue->execute();
+                }
+            }
+
             $this->pdo->commit();
             return true;
 

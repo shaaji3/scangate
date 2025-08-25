@@ -10,17 +10,23 @@ if (!isset($_SESSION["user_id"])) {
 // Include necessary files
 require_once 'config/database.php';
 require_once 'repositories/EventRepository.php';
+require_once 'repositories/UserRepository.php'; // For fetching user tickets
 
 $user_role = $_SESSION['user_role'];
 $user_id = $_SESSION['user_id'];
 
 $page_title = "Dashboard";
 
-// Depending on the role, we might fetch different data
-$events = [];
+// Depending on the role, we fetch different data
+$planner_events = [];
+$attendee_tickets = [];
+
 if ($user_role === 'planner') {
     $eventRepo = new EventRepository($pdo);
-    $events = $eventRepo->findEventsByPlanner($user_id);
+    $planner_events = $eventRepo->findEventsByPlanner($user_id);
+} elseif ($user_role === 'attendee') {
+    $userRepo = new UserRepository($pdo);
+    $attendee_tickets = $userRepo->findUserTickets($user_id);
 }
 
 ?>
@@ -35,6 +41,7 @@ if ($user_role === 'planner') {
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .header h1 { margin: 0; }
         .btn { background-color: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; }
+        .btn-download { background-color: #28a745; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
@@ -48,30 +55,27 @@ if ($user_role === 'planner') {
         </div>
 
         <h2>My Dashboard</h2>
-        <p>Your role is: <?php echo htmlspecialchars($user_role); ?></p>
 
         <?php if ($user_role === 'planner'): ?>
             <h3>My Events</h3>
             <a href="create-event.php" class="btn">Create New Event</a>
-            <?php if (!empty($events)): ?>
+            <?php if (!empty($planner_events)): ?>
                 <table>
                     <thead>
                         <tr>
                             <th>Title</th>
                             <th>Date</th>
-                            <th>Location</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($events as $event): ?>
+                        <?php foreach ($planner_events as $event): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($event->title); ?></td>
-                                <td><?php echo htmlspecialchars($event->date); ?></td>
-                                <td><?php echo htmlspecialchars($event->location); ?></td>
+                                <td><?php echo date('F j, Y, g:i a', strtotime($event->date)); ?></td>
                                 <td><?php echo htmlspecialchars($event->status); ?></td>
-                                <td><a href="edit-event.php?id=<?php echo $event->id; ?>">Edit</a></td>
+                                <td><a href="edit-event.php?id=<?php echo $event->id; ?>">Manage</a></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -81,8 +85,31 @@ if ($user_role === 'planner') {
             <?php endif; ?>
 
         <?php elseif ($user_role === 'attendee'): ?>
-            <h3>My Bookings</h3>
-            <p>You have not booked any tickets yet.</p>
+            <h3>My Tickets</h3>
+            <?php if (!empty($attendee_tickets)): ?>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Ticket Type</th>
+                            <th>Event Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($attendee_tickets as $ticket): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($ticket['event_title']); ?></td>
+                                <td><?php echo htmlspecialchars($ticket['ticket_type']); ?></td>
+                                <td><?php echo date('F j, Y, g:i a', strtotime($ticket['event_date'])); ?></td>
+                                <td><a href="download-ticket.php?code=<?php echo htmlspecialchars($ticket['ticket_code']); ?>" class="btn btn-download">Download PDF</a></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p>You have not purchased any tickets yet.</p>
+            <?php endif; ?>
 
         <?php endif; ?>
 

@@ -51,4 +51,29 @@ class UserRepository {
         $stmt->setFetchMode(PDO::FETCH_CLASS, 'User');
         return $stmt->fetch();
     }
+
+    /**
+     * Finds all issued tickets for a given user for paid orders.
+     * @param int $user_id The user's ID.
+     * @return array An array of associated ticket data.
+     */
+    public function findUserTickets($user_id) {
+        $sql = "SELECT
+                    it.ticket_code,
+                    e.title AS event_title,
+                    t.name AS ticket_type,
+                    e.date AS event_date
+                FROM issued_tickets AS it
+                JOIN order_items AS oi ON it.order_item_id = oi.id
+                JOIN tickets AS t ON oi.ticket_id = t.id
+                JOIN orders AS o ON oi.order_id = o.id
+                JOIN events AS e ON o.event_id = e.id
+                WHERE o.user_id = :user_id AND o.status = 'paid'
+                ORDER BY e.date ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

@@ -2,6 +2,8 @@
     "name": "ticketing/online-ticketing-system",
     "description": "An online event ticketing system.",
     "require": {
-        "paystack/paystack-php": "2.*"
+        "paystack/paystack-php": "2.*",
+        "dompdf/dompdf": "^2.0",
+        "endroid/qr-code": "^4.0"
     }
 }
