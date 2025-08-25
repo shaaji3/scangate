@@ -1,4 +1,8 @@
-<?php session_start(); ?>
+<?php
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/utils/CSRF.php';
+$csrf_token = CSRF::generateToken();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,6 +31,7 @@
         }
         ?>
         <form action="handle-register.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
             <div class="form-group">
                 <label for="name">Full Name</label>
                 <input type="text" id="name" name="name" required>

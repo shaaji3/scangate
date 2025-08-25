@@ -11,6 +11,7 @@ require_once 'config/database.php';
 require_once 'repositories/EventRepository.php';
 require_once 'repositories/TicketRepository.php';
 require_once 'utils/AuthGuard.php';
+require_once 'utils/CSRF.php';
 
 // Get event ID from URL
 $event_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
@@ -30,6 +31,7 @@ if (!AuthGuard::canEditEvent($pdo, $_SESSION['user_id'], $event_id)) {
 $eventRepo = new EventRepository($pdo);
 $event = $eventRepo->findEventById($event_id);
 $ticketRepo = new TicketRepository($pdo);
+$csrf_token = CSRF::generateToken();
 
 // Fetch tickets for this event
 $tickets = $ticketRepo->findTicketsByEventId($event_id);
@@ -108,6 +110,7 @@ $tickets = $ticketRepo->findTicketsByEventId($event_id);
         <div class="section">
             <h3>Add New Ticket Type</h3>
             <form action="handle-add-ticket.php" method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <input type="hidden" name="event_id" value="<?php echo $event->id; ?>">
                 <div class="form-group">
                     <label for="name">Ticket Name (e.g., General Admission, VIP)</label>

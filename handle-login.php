@@ -1,8 +1,11 @@
 <?php
-session_start();
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/utils/CSRF.php';
+require_once __DIR__ . '/repositories/UserRepository.php';
 
-require_once 'config/database.php';
-require_once 'repositories/UserRepository.php'; // User class is included in here
+if (!CSRF::validateToken($_POST['csrf_token'] ?? '')) {
+    die("CSRF token validation failed.");
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: login.php');

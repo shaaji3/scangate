@@ -12,6 +12,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+require_once 'utils/CSRF.php';
+if (!CSRF::validateToken($_POST['csrf_token'] ?? '')) {
+    die("CSRF token validation failed.");
+}
+
 require_once 'config/database.php';
 require_once 'repositories/EventRepository.php';
 

@@ -1,4 +1,8 @@
-<?php session_start(); ?>
+<?php
+session_start();
+require_once 'utils/CSRF.php';
+$csrf_token = CSRF::generateToken();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,6 +35,7 @@
         }
         ?>
         <form action="handle-login.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input type="email" id="email" name="email" required>

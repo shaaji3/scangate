@@ -7,6 +7,8 @@ if (!isset($_SESSION["user_id"]) || $_SESSION['user_role'] !== 'planner') {
     header("Location: login.php");
     exit;
 }
+require_once 'utils/CSRF.php';
+$csrf_token = CSRF::generateToken();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -35,6 +37,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION['user_role'] !== 'planner') {
         }
         ?>
         <form action="handle-create-event.php" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
             <div class="form-group">
                 <label for="title">Event Title</label>
                 <input type="text" id="title" name="title" required>

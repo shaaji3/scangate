@@ -1,14 +1,12 @@
 <?php
-session_start();
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/utils/CSRF.php';
+require_once __DIR__ . '/classes/User.php';
+require_once __DIR__ . '/repositories/UserRepository.php';
+require_once __DIR__ . '/utils/EmailSender.php';
 
-require_once 'config/database.php';
-require_once 'config/config.php';
-require_once 'classes/User.php';
-require_once 'repositories/UserRepository.php';
-require_once 'utils/EmailSender.php';
-
-if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-    require_once __DIR__ . '/vendor/autoload.php';
+if (!CSRF::validateToken($_POST['csrf_token'] ?? '')) {
+    die("CSRF token validation failed.");
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

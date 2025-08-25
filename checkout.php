@@ -70,6 +70,8 @@ $_SESSION['order_details'] = [
     'total_amount' => $total_amount
 ];
 
+require_once 'utils/CSRF.php';
+$csrf_token = CSRF::generateToken();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -106,6 +108,7 @@ $_SESSION['order_details'] = [
             </div>
         </div>
         <form action="handle-create-order.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
             <button type="submit" class="btn-confirm">Confirm and Proceed to Payment</button>
         </form>
     </div>

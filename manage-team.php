@@ -9,10 +9,12 @@ if (!isset($_SESSION["user_id"]) || $_SESSION['user_role'] !== 'planner') {
 
 require_once 'config/database.php';
 require_once 'repositories/UserRepository.php';
+require_once 'utils/CSRF.php';
 
 $userRepo = new UserRepository($pdo);
 $team_members = $userRepo->findTeamMembersByPlannerId($_SESSION['user_id']);
 
+$csrf_token = CSRF::generateToken();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -84,6 +86,7 @@ $team_members = $userRepo->findTeamMembersByPlannerId($_SESSION['user_id']);
         <div class="section">
             <h3>Add New Team Member</h3>
             <form action="handle-add-member.php" method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <div class="form-group">
                     <label for="name">Full Name</label>
                     <input type="text" id="name" name="name" required>
