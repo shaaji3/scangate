@@ -75,7 +75,10 @@ if ($user_role === 'planner') {
                                 <td><?php echo htmlspecialchars($event->title); ?></td>
                                 <td><?php echo date('F j, Y, g:i a', strtotime($event->date)); ?></td>
                                 <td><?php echo htmlspecialchars($event->status); ?></td>
-                                <td><a href="edit-event.php?id=<?php echo $event->id; ?>">Manage</a></td>
+                                <td>
+                                    <a href="edit-event.php?id=<?php echo $event->id; ?>">Manage</a> |
+                                    <a href="scan-ticket.php?event_id=<?php echo $event->id; ?>">Scan Tickets</a>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
