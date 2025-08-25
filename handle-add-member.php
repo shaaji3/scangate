@@ -13,8 +13,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once 'config/database.php';
+require_once 'config/config.php';
 require_once 'repositories/UserRepository.php';
 require_once 'classes/User.php';
+require_once 'utils/EmailSender.php';
+
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
 
 // 1. Get and validate form data
 $name = trim($_POST['name']);
@@ -63,8 +69,25 @@ try {
     $user->setPassword($temporary_password);
 
     if ($userRepo->createUser($user)) {
-        // In a real app, you would email this password. For now, display it.
-        $_SESSION['success_message'] = "Team member added successfully! <br>Email: " . htmlspecialchars($email) . "<br>Temporary Password: <strong>" . $temporary_password . "</strong>";
+        $_SESSION['success_message'] = "Team member added successfully! An email with their temporary password has been sent.";
+
+        // Send welcome email with temp password
+        try {
+            $emailSender = new EmailSender();
+            $subject = "You have been added to a team on " . APP_NAME;
+            $body = "<h1>Welcome!</h1>
+                     <p>You have been added as a team member by your event planner.</p>
+                     <p>You can now log in with your email and the following temporary password:</p>
+                     <p><strong>" . $temporary_password . "</strong></p>
+                     <p>It is recommended that you change your password after logging in.</p>";
+            $emailSender->send($user->email, $subject, $body);
+        } catch (Exception $e) {
+            // Log error but don't block the user creation
+            error_log("Failed to send team member welcome email: " . $e->getMessage());
+            // Add a message to the planner that the email failed to send
+            $_SESSION['error_message'] = "Team member created, but the welcome email could not be sent. Please provide them their temporary password manually: <strong>" . $temporary_password . "</strong>";
+        }
+
     } else {
         throw new Exception("Failed to create team member.");
     }

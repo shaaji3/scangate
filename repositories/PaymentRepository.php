@@ -54,40 +54,47 @@ class PaymentRepository {
     }
 
     /**
-     * Processes a successful payment by updating payment and order statuses in a transaction.
+     * Processes a successful payment: updates statuses, issues tickets, and sends confirmation email.
      * @param string $reference The payment reference.
      * @return bool True on success, false on failure.
      */
     public function processSuccessfulPayment($reference) {
-        // This repository needs access to OrderRepository, which is not ideal.
-        // For this project, we'll require it here.
+        // This repository needs access to other repositories, which is not ideal,
+        // but acceptable for this project's structure.
         require_once __DIR__ . '/OrderRepository.php';
+        require_once __DIR__ . '/UserRepository.php';
+        require_once __DIR__ . '/EventRepository.php';
+        require_once __DIR__ . '/../utils/PDFGenerator.php';
+        require_once __DIR__ . '/../utils/EmailSender.php';
+        require_once __DIR__ . '/../config/config.php';
+
+        if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+            require_once __DIR__ . '/../vendor/autoload.php';
+        }
+
+        $orderRepo = new OrderRepository($this->pdo);
+        $userRepo = new UserRepository($this->pdo);
+        $eventRepo = new EventRepository($this->pdo);
+
+        $ticketCodes = [];
+        $order_id = null;
 
         try {
             $this->pdo->beginTransaction();
 
-            // 1. Find the payment to get the order ID
             $payment = $this->findByReference($reference);
-            if (!$payment) {
-                throw new Exception("Payment with reference $reference not found.");
-            }
+            if (!$payment) throw new Exception("Payment not found.");
 
-            // Idempotency Check: If already processed, don't do it again.
-            if ($payment->status === 'success') {
-                return true;
-            }
+            if ($payment->status === 'success') return true; // Idempotency
 
-            // 2. Update payment status to 'success'
             $this->updateStatus($reference, 'success');
-
-            // 3. Update order status to 'paid'
-            $orderRepo = new OrderRepository($this->pdo);
             $orderRepo->updateOrderStatus($payment->order_id, 'paid');
 
-            // 4. Create the individual issued_tickets records
+            $order_id = $payment->order_id;
+
             $sqlItems = "SELECT * FROM order_items WHERE order_id = :order_id";
             $stmtItems = $this->pdo->prepare($sqlItems);
-            $stmtItems->bindValue(':order_id', $payment->order_id);
+            $stmtItems->bindValue(':order_id', $order_id);
             $stmtItems->execute();
             $orderItems = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 
@@ -100,16 +107,44 @@ class PaymentRepository {
                     $stmtIssue->bindValue(':order_item_id', $item['id']);
                     $stmtIssue->bindValue(':ticket_code', $ticketCode);
                     $stmtIssue->execute();
+                    $ticketCodes[] = $ticketCode;
                 }
             }
 
             $this->pdo->commit();
-            return true;
 
         } catch (Exception $e) {
             $this->pdo->rollBack();
-            error_log("Failed to process successful payment: " . $e->getMessage());
+            error_log("Failed to process successful payment transaction: " . $e->getMessage());
             return false;
         }
+
+        // --- Post-Transaction Actions (Email) ---
+        try {
+            $order = $orderRepo->findOrderById($order_id);
+            $user = $userRepo->findUserById($order->user_id);
+            $event = $eventRepo->findEventById($order->event_id);
+
+            $attachmentPaths = [];
+            foreach ($ticketCodes as $code) {
+                $pdfPath = PDFGenerator::generateTicketPDF($code);
+                if ($pdfPath) $attachmentPaths[] = $pdfPath;
+            }
+
+            $emailSender = new EmailSender();
+            $subject = "Your Tickets for " . $event->title;
+            $body = "<h1>Thank you for your purchase!</h1>
+                     <p>Your tickets for the event '" . htmlspecialchars($event->title) . "' are attached to this email.</p>
+                     <p>You can also view them in your dashboard.</p>";
+            $emailSender->send($user->email, $subject, $body, $attachmentPaths);
+
+            foreach ($attachmentPaths as $path) {
+                if (file_exists($path)) unlink($path);
+            }
+        } catch (Exception $e) {
+            error_log("Payment processed, but failed to send ticket confirmation email for order ID $order_id: " . $e->getMessage());
+        }
+
+        return true;
     }
 }
