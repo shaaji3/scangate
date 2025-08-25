@@ -1,8 +1,8 @@
 <?php
 session_start();
 
-// Only planners can access this page
-if (!isset($_SESSION["user_id"]) || $_SESSION['user_role'] !== 'planner') {
+// A user must be logged in to access this page
+if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit;
 }
@@ -10,6 +10,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION['user_role'] !== 'planner') {
 require_once 'config/database.php';
 require_once 'repositories/EventRepository.php';
 require_once 'repositories/TicketRepository.php';
+require_once 'utils/AuthGuard.php';
 
 // Get event ID from URL
 $event_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
@@ -18,19 +19,17 @@ if (!$event_id) {
     exit;
 }
 
-$eventRepo = new EventRepository($pdo);
-$ticketRepo = new TicketRepository($pdo);
-
-// Fetch the event
-$event = $eventRepo->findEventById($event_id);
-
-// Security check: Make sure the event exists and belongs to the logged-in planner
-if (!$event || $event->planner_id !== $_SESSION['user_id']) {
-    // You can redirect to a 403 Forbidden page or the dashboard
+// Security Check: Use the AuthGuard to verify permission
+if (!AuthGuard::canEditEvent($pdo, $_SESSION['user_id'], $event_id)) {
     $_SESSION['error_message'] = "You do not have permission to edit this event.";
     header("Location: dashboard.php");
     exit;
 }
+
+// If permission is granted, fetch the event details for display
+$eventRepo = new EventRepository($pdo);
+$event = $eventRepo->findEventById($event_id);
+$ticketRepo = new TicketRepository($pdo);
 
 // Fetch tickets for this event
 $tickets = $ticketRepo->findTicketsByEventId($event_id);

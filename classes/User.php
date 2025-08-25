@@ -8,6 +8,7 @@ class User {
     public $password;
     public $role;
     public $status;
+    public $parent_planner_id;
 
     // Methods
     public function __construct() {

@@ -59,6 +59,7 @@ if ($user_role === 'planner') {
         <?php if ($user_role === 'planner'): ?>
             <h3>My Events</h3>
             <a href="create-event.php" class="btn">Create New Event</a>
+            <a href="manage-team.php" class="btn" style="margin-left: 10px;">Manage Team</a>
             <?php if (!empty($planner_events)): ?>
                 <table>
                     <thead>

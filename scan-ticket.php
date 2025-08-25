@@ -1,14 +1,15 @@
 <?php
 session_start();
 
-// Security: Only planners can access
-if (!isset($_SESSION["user_id"]) || $_SESSION['user_role'] !== 'planner') {
+// A user must be logged in to access this page
+if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit;
 }
 
 require_once 'config/database.php';
 require_once 'repositories/EventRepository.php';
+require_once 'utils/AuthGuard.php';
 
 // Get event ID from URL and validate it
 $event_id = filter_input(INPUT_GET, 'event_id', FILTER_VALIDATE_INT);
@@ -16,13 +17,14 @@ if (!$event_id) {
     die("Event ID is required.");
 }
 
-// Verify that the event belongs to the logged-in planner
+// Security Check: Use the AuthGuard to verify permission
+if (!AuthGuard::canScanTickets($pdo, $_SESSION['user_id'], $event_id)) {
+    die("Access Denied: You do not have permission to scan tickets for this event.");
+}
+
+// If permission is granted, fetch the event details for display
 $eventRepo = new EventRepository($pdo);
 $event = $eventRepo->findEventById($event_id);
-
-if (!$event || $event->planner_id !== $_SESSION['user_id']) {
-    die("Access Denied: You do not have permission to manage this event.");
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">

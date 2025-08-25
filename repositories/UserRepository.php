@@ -15,12 +15,14 @@ class UserRepository {
      * @return bool True on success, false on failure.
      */
     public function createUser(User $user) {
-        $sql = "INSERT INTO users (name, email, password, role) VALUES (:name, :email, :password, :role)";
+        $sql = "INSERT INTO users (name, email, password, role, parent_planner_id)
+                VALUES (:name, :email, :password, :role, :parent_planner_id)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':name', $user->name);
         $stmt->bindValue(':email', $user->email);
         $stmt->bindValue(':password', $user->password); // The hashed password
         $stmt->bindValue(':role', $user->role);
+        $stmt->bindValue(':parent_planner_id', $user->parent_planner_id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
@@ -73,6 +75,19 @@ class UserRepository {
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Finds all team members associated with a given planner.
+     * @param int $planner_id The planner's user ID.
+     * @return array An array of team member data.
+     */
+    public function findTeamMembersByPlannerId($planner_id) {
+        $sql = "SELECT id, name, email, role FROM users WHERE parent_planner_id = :planner_id ORDER BY name ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':planner_id', $planner_id, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
