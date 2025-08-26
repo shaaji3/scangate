@@ -9,7 +9,7 @@ require_once 'utils/CSRF.php';
 <div id="error-message" class="alert alert-danger" style="display: none;"></div>
 
 <form id="login-form" method="POST">
-    <input type="hidden" name="csrf_token" value="<?php echo CSRF::generateToken('login_form'); ?>">
+    <input type="hidden" name="csrf_token" value="<?php echo CSRF::generateToken(); ?>">
     <div class="mb-3">
         <label class="mb-1"><strong>Email</strong></label>
         <input type="email" class="form-control" name="email" placeholder="hello@example.com" required>
@@ -18,7 +18,7 @@ require_once 'utils/CSRF.php';
         <label class="mb-1"><strong>Password</strong></label>
         <input type="password" class="form-control" name="password" required>
     </div>
-    <div class="row d-flex justify-content-between mt-4 mb-2">
+    <div class="form-row d-flex flex-wrap justify-content-between align-items-baseline mb-2">
         <div class="mb-3">
            <div class="form-check custom-checkbox ms-1">
                 <input type="checkbox" class="form-check-input" id="basic_checkbox_1">

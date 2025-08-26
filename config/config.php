@@ -24,19 +24,19 @@ define('SMTP_PORT', getenv('SMTP_PORT') ?: 587);
 */
 
 define('APP_INFO', [
-    'app_name' => 'UHMS',
+    'app_name' => 'ALFPASS',
     'app_version' => '0.1.0',
-    'app_description' => 'UHMS is a modular, secure, and scalable hospital management system',
-    'app_url' => 'https://uhms.local',
+    'app_description' => 'ALFPASS is a modular, secure, and scalable Event Ticketing System',
+    'app_url' => 'https://alfpass.local',
     'app_logo' => '/assets/images/logo-sm.png',
     'app_emails' => [
         'otp' => 'no-reply@nisepa.ni.gov.ng',
         'invoice' => 'billing@nisepa.ni.gov.ng',
         'password_reset' => 'secure@nisepa.ni.gov.ng'
     ],
-    'company_name' => 'UNLOCK ICT LTD.',
+    'company_name' => 'Alfrix.',
     'company_logo' => '/assets/images/logo-sm-dark.png',
-    'company_alias' => 'Unlockict',
+    'company_alias' => 'Alfrix',
     'company_phone' => '08036910019',
     'company_address' => 'No. 41 Okada Road, Minna, 920101, Niger',
 ]);

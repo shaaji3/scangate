@@ -14,8 +14,16 @@ function json_response($success, $data) {
     exit;
 }
 
+
+$rateLimiter = new RateLimiter($pdo);
+$allowed_rate = $rateLimiter->checkWithGlobal("register_attempt", "global");
+
+if ($allowed_rate < 1) {
+    json_response(false, ['error' => 'Rate limit exceeded. Please try again later.']);
+}
+
 // --- CSRF Validation ---
-if (!CSRF::validateToken($_POST['csrf_token'] ?? '', 'register_form')) {
+if (!CSRF::validateToken($_POST['csrf_token'] ?? '')) {
     json_response(false, ['error' => 'Invalid request. Please try again.']);
 }
 

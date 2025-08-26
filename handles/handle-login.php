@@ -1,15 +1,27 @@
 <?php
 require_once __DIR__ . '/../bootstrap.php';
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../utils/CSRF.php';
+require_once __DIR__ . '/../utils/RateLimiter.php';
 require_once __DIR__ . '/../repositories/UserRepository.php';
 
 // Set header to return JSON
 header('Content-Type: application/json');
 
+
 // --- Response helper ---
 function json_response($success, $data) {
     echo json_encode(['success' => $success] + $data);
     exit;
+}
+
+
+
+$rateLimiter = new RateLimiter($pdo);
+$allowed_rate = $rateLimiter->checkWithGlobal("login_attempt", "global");
+
+if ($allowed_rate < 1) {
+    json_response(false, ['error' => 'Rate limit exceeded. Please try again later.']);
 }
 
 // --- CSRF Validation ---

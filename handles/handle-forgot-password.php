@@ -12,6 +12,14 @@ function json_response($success, $data) {
     exit;
 }
 
+
+$rateLimiter = new RateLimiter($pdo);
+$allowed_rate = $rateLimiter->checkWithGlobal("forgot_password", "global");
+
+if ($allowed_rate < 1) {
+    json_response(false, ['error' => 'Rate limit exceeded. Please try again later.']);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(false, ['error' => 'Invalid request method.']);
 }

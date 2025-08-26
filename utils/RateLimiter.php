@@ -5,7 +5,7 @@ class RateLimiter
     private $ipAddress;
     private $userId;
 
-    public function __construct(mysqli $conn, $userId = null)
+    public function __construct(PDO $conn, $userId = null)
     {
         $this->conn = $conn;
         $this->ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -121,9 +121,9 @@ class RateLimiter
     private function getRule($action)
     {
         $stmt = $this->conn->prepare("SELECT * FROM rate_limit_rules WHERE action = ?");
-        $stmt->bind_param("s", $action);
+        $stmt->bindParam(1, $action);
         $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        return $stmt->fetchAll();
     }
 
     private function getTracker($action)
@@ -133,9 +133,11 @@ class RateLimiter
             WHERE action = ? AND (user_id = ? OR ip_address = ?)
             ORDER BY id DESC LIMIT 1
         ");
-        $stmt->bind_param("sis", $action, $this->userId, $this->ipAddress);
+        $stmt->bindParam(1, $action);
+        $stmt->bindParam(2, $this->userId);
+        $stmt->bindParam(3, $this->ipAddress);
         $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        return $stmt->fetch();
     }
 
     private function createTracker($action, $windowSeconds)
@@ -149,21 +151,28 @@ class RateLimiter
             INSERT INTO rate_limit_tracker (user_id, ip_address, action, attempts, window_start, window_end, last_attempt)
             VALUES (?, ?, ?, 1, ?, ?, ?)
         ");
-        $stmt->bind_param("isssss", $this->userId, $this->ipAddress, $action, $windowStartStr, $windowEndStr, $windowStartStr);
+        $stmt->bindParam(1, $this->userId);
+        $stmt->bindParam(2, $this->ipAddress);
+        $stmt->bindParam(3, $action);
+        $stmt->bindParam(4, $windowStartStr);
+        $stmt->bindParam(5, $windowEndStr);
+        $stmt->bindParam(6, $windowStartStr);
         $stmt->execute();
     }
 
     private function incrementAttempts($id)
     {
         $stmt = $this->conn->prepare("UPDATE rate_limit_tracker SET attempts = attempts + 1, last_attempt = NOW() WHERE id = ?");
-        $stmt->bind_param("i", $id);
+        $stmt->bindParam(1, $id);
         $stmt->execute();
     }
 
     private function resetTracker($action, $windowSeconds)
     {
         $stmt = $this->conn->prepare("DELETE FROM rate_limit_tracker WHERE action = ? AND (user_id = ? OR ip_address = ?)");
-        $stmt->bind_param("sis", $action, $this->userId, $this->ipAddress);
+        $stmt->bindParam(1, $action);
+        $stmt->bindParam(2, $this->userId);
+        $stmt->bindParam(3, $this->ipAddress);
         $stmt->execute();
         $this->createTracker($action, $windowSeconds);
     }
