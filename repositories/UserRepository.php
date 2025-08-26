@@ -123,4 +123,115 @@ class UserRepository {
             ':id' => $user_id
         ]);
     }
+
+    /**
+     * Gets users for server-side DataTables.
+     * @param array $params Parameters from DataTables (start, length, search, order).
+     * @return array Contains `data`, `recordsTotal`, `recordsFiltered`.
+     */
+    public function getUsersForDataTable(array $params): array
+    {
+        $baseSql = "FROM users";
+        $totalRecords = $this->pdo->query("SELECT COUNT(*) $baseSql")->fetchColumn();
+
+        // Search filtering
+        $searchSql = "";
+        if (!empty($params['search']['value'])) {
+            $searchValue = "%" . $params['search']['value'] . "%";
+            $searchSql = " WHERE name LIKE :search_value OR email LIKE :search_value";
+        }
+
+        // Get filtered records count
+        $filteredRecordsSql = "SELECT COUNT(*) $baseSql $searchSql";
+        $stmt = $this->pdo->prepare($filteredRecordsSql);
+        if (!empty($searchValue)) {
+            $stmt->bindValue(':search_value', $searchValue, PDO::PARAM_STR);
+        }
+        $stmt->execute();
+        $recordsFiltered = $stmt->fetchColumn();
+
+        // Ordering
+        $orderSql = "";
+        if (isset($params['order'])) {
+            $columnIdx = $params['order'][0]['column'];
+            $columnName = $params['columns'][$columnIdx]['data'];
+            $dir = $params['order'][0]['dir'];
+            // Whitelist column names to prevent SQL injection
+            $allowedColumns = ['id', 'name', 'email', 'role', 'status', 'created_at'];
+            if (in_array($columnName, $allowedColumns)) {
+                $orderSql = " ORDER BY " . $columnName . " " . strtoupper($dir);
+            }
+        }
+
+        // Pagination
+        $limitSql = "";
+        if (isset($params['start']) && isset($params['length'])) {
+            $limitSql = " LIMIT " . (int)$params['start'] . ", " . (int)$params['length'];
+        }
+
+        // Final query
+        $dataSql = "SELECT id, name, email, role, status, created_at $baseSql $searchSql $orderSql $limitSql";
+        $stmt = $this->pdo->prepare($dataSql);
+        if (!empty($searchValue)) {
+            $stmt->bindValue(':search_value', $searchValue, PDO::PARAM_STR);
+        }
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            "draw"            => intval($params['draw']),
+            "recordsTotal"    => intval($totalRecords),
+            "recordsFiltered" => intval($recordsFiltered),
+            "data"            => $data
+        ];
+    }
+
+    /**
+     * Updates a user's details by an admin.
+     * @param int $user_id
+     * @param string $name
+     * @param string $email
+     * @param string $role
+     * @param string $status
+     * @return bool
+     */
+    public function updateUserAsAdmin(int $user_id, string $name, string $email, string $role, string $status): bool
+    {
+        $sql = "UPDATE users SET name = :name, email = :email, role = :role, status = :status WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':name' => $name,
+            ':email' => $email,
+            ':role' => $role,
+            ':status' => $status,
+            ':id' => $user_id
+        ]);
+    }
+
+    /**
+     * Updates a user's status.
+     * @param int $user_id
+     * @param string $status
+     * @return bool
+     */
+    public function updateUserStatus(int $user_id, string $status): bool
+    {
+        $sql = "UPDATE users SET status = :status WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([':status' => $status, ':id' => $user_id]);
+    }
+
+    /**
+     * Deletes a user from the database.
+     * @param int $user_id
+     * @return bool
+     */
+    public function deleteUser(int $user_id): bool
+    {
+        // Add constraints check here if needed, e.g., don't delete if they have orders.
+        // For now, we assume direct deletion is allowed.
+        $sql = "DELETE FROM users WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([':id' => $user_id]);
+    }
 }
