@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/bootstrap.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -8,28 +8,31 @@ if (!isset($_SESSION['user_id'])) {
 
 $reference = filter_input(INPUT_GET, 'ref', FILTER_SANITIZE_STRING);
 
+$page_title = "Payment Successful";
+require_once __DIR__ . '/includes/header-public.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Payment Successful</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
-        .container { max-width: 600px; margin: auto; }
-        .success-icon { color: green; font-size: 5em; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="success-icon">&#10004;</div>
-        <h1>Payment Successful!</h1>
-        <p>Thank you! Your payment has been successfully processed.</p>
-        <?php if ($reference): ?>
-            <p>Your payment reference is: <strong><?php echo htmlspecialchars($reference); ?></strong></p>
-        <?php endif; ?>
-        <p>Your tickets are now available in your dashboard. A confirmation email has been sent to you.</p>
-        <p><a href="dashboard.php">Go to Dashboard</a></p>
+
+<div class="container my-5">
+    <div class="row d-flex justify-content-center">
+        <div class="col-lg-8 text-center">
+            <div class="card">
+                <div class="card-body">
+                    <i class="fa fa-check-circle text-success" style="font-size: 80px; margin-bottom: 20px;"></i>
+                    <h1 class="card-title">Payment Successful!</h1>
+                    <p class="lead">Thank you! Your payment has been successfully processed.</p>
+
+                    <?php if ($reference): ?>
+                        <p>Your payment reference is: <strong><?php echo htmlspecialchars($reference); ?></strong></p>
+                    <?php endif; ?>
+
+                    <p>Your tickets are now available in your dashboard. A confirmation email with your tickets attached has been sent to you.</p>
+                    <a href="dashboard.php" class="btn btn-primary btn-lg mt-3">Go to Dashboard</a>
+                </div>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+</div>
+
+<?php
+require_once __DIR__ . '/includes/footer-public.php';
+?>

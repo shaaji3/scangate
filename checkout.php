@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/bootstrap.php';
 
 // User must be logged in to checkout
 if (!isset($_SESSION["user_id"])) {
@@ -10,9 +10,10 @@ if (!isset($_SESSION["user_id"])) {
     exit;
 }
 
-require_once 'config/database.php';
-require_once 'repositories/EventRepository.php';
-require_once 'repositories/TicketRepository.php';
+require_once __DIR__ . '/repositories/EventRepository.php';
+require_once __DIR__ . '/repositories/TicketRepository.php';
+require_once __DIR__ . '/utils/URLUtils.php';
+require_once __DIR__ . '/utils/CSRF.php';
 
 // Validate POST data
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['event_id']) || !isset($_POST['tickets'])) {
@@ -20,17 +21,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['event_id']) || !isse
     exit;
 }
 
-$event_id = filter_input(INPUT_POST, 'event_id', FILTER_VALIDATE_INT);
+$encrypted_event_id = $_POST['event_id'];
+$event_id = URLUtils::decrypt($encrypted_event_id);
 $selected_tickets = $_POST['tickets'];
 
 // Filter out tickets with zero quantity
 $selected_tickets = array_filter($selected_tickets, function($qty) {
-    return (int)$qty > 0;
+    return is_numeric($qty) && (int)$qty > 0;
 });
 
 if (!$event_id || empty($selected_tickets)) {
-    // Redirect back if no tickets were selected
-    header("Location: event.php?id=" . $event_id);
+    header("Location: event.php?id=" . urlencode($encrypted_event_id));
     exit;
 }
 
@@ -39,7 +40,6 @@ $ticketRepo = new TicketRepository($pdo);
 
 $event = $eventRepo->findEventById($event_id);
 if (!$event) {
-    // Handle error: event not found
     die("Event not found.");
 }
 
@@ -62,7 +62,6 @@ foreach ($selected_tickets as $ticket_id => $quantity) {
     }
 }
 
-// Store the final order details in the session for the handler
 $_SESSION['order_details'] = [
     'user_id' => $_SESSION['user_id'],
     'event_id' => $event_id,
@@ -70,47 +69,46 @@ $_SESSION['order_details'] = [
     'total_amount' => $total_amount
 ];
 
-require_once 'utils/CSRF.php';
-$csrf_token = CSRF::generateToken();
+$page_title = "Checkout";
+require_once __DIR__ . '/includes/header-public.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Checkout</title>
-    <style>
-        body { font-family: sans-serif; }
-        .container { padding: 20px; max-width: 700px; margin: auto; }
-        .order-summary { border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
-        .order-summary h2 { margin-top: 0; }
-        .summary-item { display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .total { font-weight: bold; font-size: 1.2em; margin-top: 20px; }
-        .btn-confirm { background-color: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 1.2em; display: inline-block; margin-top: 20px; border: none; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Order Checkout</h1>
-        <div class="order-summary">
-            <h2>Order Summary</h2>
-            <p><strong>Event:</strong> <?php echo htmlspecialchars($event->title); ?></p>
-            <hr>
-            <?php foreach ($order_items as $item): ?>
-                <div class="summary-item">
-                    <span><?php echo htmlspecialchars($item['quantity']); ?> x <?php echo htmlspecialchars($item['name']); ?></span>
-                    <span>$<?php echo htmlspecialchars(number_format($item['subtotal'], 2)); ?></span>
+
+<div class="container my-5">
+    <div class="row d-flex justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Order Checkout</h4>
                 </div>
-            <?php endforeach; ?>
-            <hr>
-            <div class="summary-item total">
-                <span>Total Amount</span>
-                <span>$<?php echo htmlspecialchars(number_format($total_amount, 2)); ?></span>
+                <div class="card-body">
+                    <h5 class="card-title">Order Summary</h5>
+                    <p><strong>Event:</strong> <?php echo htmlspecialchars($event->title); ?></p>
+                    <hr>
+                    <ul class="list-group list-group-flush">
+                        <?php foreach ($order_items as $item): ?>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <?php echo htmlspecialchars($item['quantity']); ?> x <?php echo htmlspecialchars($item['name']); ?>
+                                <span>$<?php echo htmlspecialchars(number_format($item['subtotal'], 2)); ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                        <li class="list-group-item d-flex justify-content-between align-items-center fw-bold fs-5">
+                            Total Amount
+                            <span>$<?php echo htmlspecialchars(number_format($total_amount, 2)); ?></span>
+                        </li>
+                    </ul>
+                    <div class="text-center mt-4">
+                        <form action="initiate-payment.php" method="POST">
+                            <input type="hidden" name="csrf_token" value="<?php echo CSRF::generateToken('initiate_payment'); ?>">
+                            <button type="submit" class="btn btn-primary btn-lg">Confirm and Proceed to Payment</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
-        <form action="handle-create-order.php" method="POST">
-            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-            <button type="submit" class="btn-confirm">Confirm and Proceed to Payment</button>
-        </form>
     </div>
-</body>
-</html>
+</div>
+
+
+<?php
+require_once __DIR__ . '/includes/footer-public.php';
+?>

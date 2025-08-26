@@ -6,7 +6,7 @@ require_once __DIR__ . '/utils/URLUtils.php';
 
 $page_title = "Event Details"; // Default title
 
-// 1. Get and decrypt the event ID from the URL
+// Get and decrypt the event ID from the URL
 $encrypted_event_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_STRING);
 if (!$encrypted_event_id) {
     header("Location: index.php");
@@ -15,11 +15,10 @@ if (!$encrypted_event_id) {
 
 $event_id = URLUtils::decrypt($encrypted_event_id);
 if (!$event_id) {
-    // Decryption failed or invalid ID
     die("Invalid Event ID.");
 }
 
-// 2. Fetch the event and tickets from the database
+// Fetch the event and tickets from the database
 try {
     $eventRepo = new EventRepository($pdo);
     $event = $eventRepo->findEventById($event_id);
@@ -29,9 +28,9 @@ try {
 } catch (Exception $e) {
     $event = null;
     $tickets = [];
+    error_log("Event page error: " . $e->getMessage());
 }
 
-// 3. If event not found, display an error message
 if (!$event) {
     http_response_code(404);
     $page_title = "Event Not Found";
@@ -39,59 +38,69 @@ if (!$event) {
     $page_title = htmlspecialchars($event->title);
 }
 
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/header-public.php';
 ?>
 
-<style>
-    /* Page-specific styles */
-    .event-banner { width: 100%; height: 300px; object-fit: cover; border-radius: 5px; margin-bottom: 20px; }
-    .event-details h1 { margin-top: 0; }
-    .tickets-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
-    .ticket-type { display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; }
-    .ticket-type input { width: 60px; text-align: center; }
-    .btn-checkout { background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 1.2em; display: inline-block; margin-top: 20px; border: none; cursor: pointer; }
-</style>
-
-<?php if ($event): ?>
-    <img src="<?php echo htmlspecialchars($event->banner ?: 'assets/images/default_banner.jpg'); ?>" alt="<?php echo htmlspecialchars($event->title); ?>" class="event-banner">
-    <div class="event-details">
-        <h1><?php echo htmlspecialchars($event->title); ?></h1>
-        <p><strong>Date:</strong> <?php echo date('F j, Y, g:i a', strtotime($event->date)); ?></p>
-        <p><strong>Location:</strong> <?php echo htmlspecialchars($event->location); ?></p>
-        <hr>
-        <h3>About this event</h3>
-        <p><?php echo nl2br(htmlspecialchars($event->description)); ?></p>
-    </div>
-
-    <div class="tickets-section">
-        <h3>Get Your Tickets</h3>
-        <?php if (!empty($tickets)): ?>
-            <form action="checkout.php" method="POST">
-                <input type="hidden" name="event_id" value="<?php echo URLUtils::encrypt($event->id); ?>">
-                <?php foreach ($tickets as $ticket): ?>
-                    <div class="ticket-type">
-                        <div>
-                            <strong><?php echo htmlspecialchars($ticket->name); ?></strong><br>
-                            <span>$<?php echo htmlspecialchars(number_format($ticket->price, 2)); ?></span>
-                        </div>
-                        <div>
-                            <label for="ticket_<?php echo $ticket->id; ?>">Quantity:</label>
-                            <input type="number" id="ticket_<?php echo $ticket->id; ?>" name="tickets[<?php echo $ticket->id; ?>]" min="0" max="<?php echo $ticket->quantity; ?>" value="0">
-                        </div>
+<div class="container my-5">
+    <?php if ($event): ?>
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <img src="<?php echo htmlspecialchars($event->banner ?: 'assets/images/default_banner.jpg'); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($event->title); ?>" style="max-height: 400px; object-fit: cover;">
+                    <div class="card-body">
+                        <h1 class="card-title"><?php echo htmlspecialchars($event->title); ?></h1>
+                        <h5 class="card-subtitle mb-2 text-muted"><?php echo date('l, F j, Y - g:i A', strtotime($event->date)); ?></h5>
+                        <p class="card-text"><i class="fa fa-map-marker-alt me-2"></i><?php echo htmlspecialchars($event->location); ?></p>
+                        <hr>
+                        <h4>About this Event</h4>
+                        <p><?php echo nl2br(htmlspecialchars($event->description)); ?></p>
                     </div>
-                <?php endforeach; ?>
-                <button type="submit" class="btn-checkout">Proceed to Checkout</button>
-            </form>
-        <?php else: ?>
-            <p>Tickets for this event are not yet available. Please check back soon.</p>
-        <?php endif; ?>
-    </div>
-<?php else: ?>
-    <h1>404 - Event Not Found</h1>
-    <p>Sorry, the event you are looking for does not exist.</p>
-    <a href='index.php'>Go back to events list</a>
-<?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Get Your Tickets</h4>
+                    </div>
+                    <div class="card-body">
+                        <?php if (!empty($tickets)): ?>
+                            <form action="checkout.php" method="POST">
+                                <input type="hidden" name="event_id" value="<?php echo URLUtils::encrypt($event->id); ?>">
+                                <?php foreach ($tickets as $ticket): ?>
+                                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                                        <div>
+                                            <h5 class="mb-0"><?php echo htmlspecialchars($ticket->name); ?></h5>
+                                            <span class="text-muted">$<?php echo htmlspecialchars(number_format($ticket->price, 2)); ?></span>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <label for="ticket_<?php echo $ticket->id; ?>" class="form-label me-2 mb-0">Quantity:</label>
+                                            <input type="number" id="ticket_<?php echo $ticket->id; ?>" name="tickets[<?php echo $ticket->id; ?>]" class="form-control" style="width: 100px;" min="0" max="<?php echo $ticket->quantity; ?>" value="0">
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                                <div class="text-end mt-4">
+                                    <button type="submit" class="btn btn-primary btn-lg">Proceed to Checkout</button>
+                                </div>
+                            </form>
+                        <?php else: ?>
+                            <p class="text-muted">Tickets for this event are not yet available. Please check back soon.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php else: ?>
+        <div class="text-center">
+            <h1>404 - Event Not Found</h1>
+            <p class="lead">Sorry, the event you are looking for does not exist.</p>
+            <a href='index.php' class="btn btn-primary">Go back to events list</a>
+        </div>
+    <?php endif; ?>
+</div>
 
 <?php
-require_once __DIR__ . '/includes/footer.php';
+require_once __DIR__ . '/includes/footer-public.php';
 ?>

@@ -1,72 +1,84 @@
 <?php
-session_start();
+$page_title = "Create New Event";
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/utils/CSRF.php';
 
-// Only planners can access this page
-if (!isset($_SESSION["user_id"]) || $_SESSION['user_role'] !== 'planner') {
-    // Redirect to login or a generic access denied page
-    header("Location: login.php");
+// AuthGuard is in header-auth
+// Additional check for planner role
+if ($_SESSION['user_role'] !== 'planner') {
+    // Or redirect to a more appropriate "access denied" page
+    header("Location: dashboard.php");
     exit;
 }
-require_once 'utils/CSRF.php';
-$csrf_token = CSRF::generateToken();
+
+require_once __DIR__ . '/includes/header-auth.php';
+require_once __DIR__ . '/includes/sidebar.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Create New Event</title>
-    <style>
-        body { font-family: sans-serif; }
-        .container { max-width: 600px; margin: 50px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input[type="text"], input[type="datetime-local"], textarea, select { width: 100%; padding: 8px; box-sizing: border-box; }
-        textarea { height: 120px; }
-        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; }
-        .message { padding: 10px; margin-bottom: 15px; border-radius: 5px; }
-        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Create a New Event</h2>
-        <?php
-        if (isset($_SESSION['error_message'])) {
-            echo '<div class="message error">' . $_SESSION['error_message'] . '</div>';
-            unset($_SESSION['error_message']);
-        }
-        ?>
-        <form action="handle-create-event.php" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-            <div class="form-group">
-                <label for="title">Event Title</label>
-                <input type="text" id="title" name="title" required>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Create a New Event</h4>
             </div>
-            <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" required></textarea>
+            <div class="card-body">
+                <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+                <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+                <form id="create-event-form" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="<?php echo CSRF::generateToken('create_event_form'); ?>">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Event Title</label>
+                            <input type="text" class="form-control" name="title" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Location</label>
+                            <input type="text" class="form-control" name="location" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="5" required></textarea>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Date and Time</label>
+                            <input type="datetime-local" class="form-control" name="date" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Event Banner</label>
+                            <input type="file" class="form-control" name="banner" accept="image/png, image/jpeg, image/gif">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select form-control" name="status" required>
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="create-event-button" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                        Create Event
+                    </button>
+                </form>
             </div>
-            <div class="form-group">
-                <label for="location">Location</label>
-                <input type="text" id="location" name="location" required>
-            </div>
-            <div class="form-group">
-                <label for="date">Date and Time</label>
-                <input type="datetime-local" id="date" name="date" required>
-            </div>
-            <div class="form-group">
-                <label for="banner">Event Banner</label>
-                <input type="file" id="banner" name="banner" accept="image/png, image/jpeg, image/gif">
-            </div>
-             <div class="form-group">
-                <label for="status">Status</label>
-                <select id="status" name="status" required>
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                </select>
-            </div>
-            <button type="submit">Create Event</button>
-        </form>
+        </div>
     </div>
-</body>
-</html>
+</div>
+
+<script src="assets/js/event.js"></script>
+
+<?php
+require_once __DIR__ . '/includes/footer-auth.php';
+?>
