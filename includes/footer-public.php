@@ -1,6 +1,4 @@
 <!-- Content ends here -->
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>

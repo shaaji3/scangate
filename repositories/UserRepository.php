@@ -107,4 +107,20 @@ class UserRepository {
             ':id' => $user_id
         ]);
     }
+
+    /**
+     * Updates a user's name.
+     * @param int $user_id The ID of the user to update.
+     * @param string $new_name The new name for the user.
+     * @return bool True on success, false on failure.
+     */
+    public function updateUserName(int $user_id, string $new_name): bool
+    {
+        $sql = "UPDATE users SET name = :name WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':name' => $new_name,
+            ':id' => $user_id
+        ]);
+    }
 }
