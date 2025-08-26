@@ -6,6 +6,22 @@ require_once __DIR__ . '/../repositories/EventRepository.php';
 class AuthGuard {
 
     /**
+     * A simple guard to protect pages that require a user to be logged in.
+     * It checks for a user_id in the session and redirects to login.php if not found.
+     */
+    public static function guard() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!isset($_SESSION["user_id"])) {
+            // Determine the correct path to login.php based on the current script's location
+            $path_to_login = file_exists('login.php') ? 'login.php' : '../login.php';
+            header("Location: " . $path_to_login);
+            exit;
+        }
+    }
+
+    /**
      * Checks if a user has permission to edit/manage a specific event.
      * An event can be managed by its direct planner or an assigned Event Manager.
      *
