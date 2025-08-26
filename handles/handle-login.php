@@ -1,49 +1,70 @@
 <?php
-require_once __DIR__ . '/bootstrap.php';
-require_once __DIR__ . '/utils/CSRF.php';
-require_once __DIR__ . '/repositories/UserRepository.php';
+require_once __DIR__ . '/../bootstrap.php';
+require_once __DIR__ . '/../utils/CSRF.php';
+require_once __DIR__ . '/../repositories/UserRepository.php';
 
-if (!CSRF::validateToken($_POST['csrf_token'] ?? '')) {
-    die("CSRF token validation failed.");
+// Set header to return JSON
+header('Content-Type: application/json');
+
+// --- Response helper ---
+function json_response($success, $data) {
+    echo json_encode(['success' => $success] + $data);
+    exit;
 }
 
+// --- CSRF Validation ---
+if (!CSRF::validateToken($_POST['csrf_token'] ?? '', 'login_form')) {
+    json_response(false, ['error' => 'Invalid request. Please try again.']);
+}
+
+// --- Request Method Check ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: login.php');
-    exit;
+    json_response(false, ['error' => 'Invalid request method.']);
 }
 
-// 1. Get form data
-$email = trim($_POST['email']);
-$password = $_POST['password'];
+// --- Get and Validate Form Data ---
+$email = trim($_POST['email'] ?? '');
+$password = $_POST['password'] ?? '';
 
-// 2. Validate input
 if (empty($email) || empty($password)) {
-    $_SESSION['error_message'] = "Email and password are required.";
-    header('Location: login.php');
-    exit;
+    json_response(false, ['error' => 'Email and password are required.']);
 }
 
-// 3. Find user and verify password
-$userRepo = new UserRepository($pdo);
-$user = $userRepo->findUserByEmail($email);
+// --- Authenticate User ---
+try {
+    $userRepo = new UserRepository($pdo);
+    $user = $userRepo->findUserByEmail($email);
 
-if ($user && $user->verifyPassword($password)) {
-    // 4. Authentication successful
-    session_regenerate_id(true); // Prevent session fixation attacks
-    $_SESSION['user_id'] = $user->id;
-    $_SESSION['user_role'] = $user->role;
-    $_SESSION['user_name'] = $user->name;
+    if ($user && $user->verifyPassword($password)) {
+        // Authentication successful
+        session_regenerate_id(true);
+        $_SESSION['user_id'] = $user->id;
+        $_SESSION['user_role'] = $user->role;
+        $_SESSION['user_name'] = $user->name;
 
-    // 5. Redirect based on role
-    if ($user->role === 'super_admin') {
-        header('Location: admin-dashboard.php');
+        // Check for trusted device cookie
+        if (isset($_COOKIE['trusted_device']) && $_COOKIE['trusted_device'] === 'yes') {
+            json_response(true, ['redirect_url' => 'dashboard.php']);
+        } else {
+            // Device not trusted, proceed to OTP verification
+            $_SESSION['otp_user_id'] = $user->id; // Store user ID for OTP check
+
+            // Generate and store OTP
+            $otp_code = random_int(100000, 999999);
+            $_SESSION['otp_code'] = $otp_code;
+            $_SESSION['otp_expiry'] = time() + 300; // OTP valid for 5 minutes
+
+            // In a real application, you would send the OTP via email here.
+            // For simulation, we can log it or just rely on the session.
+            error_log("OTP for user " . $user->id . ": " . $otp_code);
+
+            json_response(true, ['redirect_url' => 'otp.php']);
+        }
     } else {
-        header('Location: dashboard.php');
+        // Authentication failed
+        json_response(false, ['error' => 'Invalid email or password.']);
     }
-    exit;
-} else {
-    // 6. Authentication failed
-    $_SESSION['error_message'] = "Invalid email or password.";
-    header('Location: login.php');
-    exit;
+} catch (Exception $e) {
+    // Log the exception $e->getMessage()
+    json_response(false, ['error' => 'An internal server error occurred.']);
 }

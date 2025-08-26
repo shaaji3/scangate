@@ -91,4 +91,20 @@ class UserRepository {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Updates a user's password.
+     * @param int $user_id The ID of the user to update.
+     * @param string $new_password_hash The new, hashed password.
+     * @return bool True on success, false on failure.
+     */
+    public function updateUserPassword(int $user_id, string $new_password_hash): bool
+    {
+        $sql = "UPDATE users SET password = :password WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':password' => $new_password_hash,
+            ':id' => $user_id
+        ]);
+    }
 }

@@ -1,133 +1,141 @@
 <?php
-session_start();
-
-// A user must be logged in to access this page
-if (!isset($_SESSION["user_id"])) {
-    header("Location: login.php");
-    exit;
-}
 require_once __DIR__ . '/bootstrap.php';
-require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/repositories/EventRepository.php';
 require_once __DIR__ . '/repositories/TicketRepository.php';
 require_once __DIR__ . '/utils/AuthGuard.php';
 require_once __DIR__ . '/utils/CSRF.php';
+require_once __DIR__ . '/utils/URLUtils.php';
 
-// Get event ID from URL
-$event_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$page_title = "Edit Event";
+
+// Decrypt and validate event ID from URL
+$encrypted_event_id = $_GET['id'] ?? '';
+$event_id = URLUtils::decrypt($encrypted_event_id);
+
 if (!$event_id) {
-    header("Location: dashboard.php"); // Redirect if no ID is provided
+    header("Location: dashboard.php");
     exit;
 }
 
-// Security Check: Use the AuthGuard to verify permission
+// AuthGuard is in header-auth.php, but we need to run the specific check here.
 if (!AuthGuard::canEditEvent($pdo, $_SESSION['user_id'], $event_id)) {
     $_SESSION['error_message'] = "You do not have permission to edit this event.";
     header("Location: dashboard.php");
     exit;
 }
 
-// If permission is granted, fetch the event details for display
+// Fetch event details
 $eventRepo = new EventRepository($pdo);
 $event = $eventRepo->findEventById($event_id);
-$ticketRepo = new TicketRepository($pdo);
-$csrf_token = CSRF::generateToken();
+
+if (!$event) {
+    // Event not found
+    header("Location: dashboard.php");
+    exit;
+}
 
 // Fetch tickets for this event
+$ticketRepo = new TicketRepository($pdo);
 $tickets = $ticketRepo->findTicketsByEventId($event_id);
 
+require_once __DIR__ . '/includes/header-auth.php';
+require_once __DIR__ . '/includes/sidebar.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Edit Event: <?php echo htmlspecialchars($event->title); ?></title>
-    <style>
-        body { font-family: sans-serif; }
-        .container { padding: 20px; max-width: 960px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .btn { background-color: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .section { margin-top: 40px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input[type="text"], input[type="number"] { width: 100%; padding: 8px; box-sizing: border-box; }
-        .message { padding: 10px; margin-bottom: 15px; border-radius: 5px; }
-        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Edit Event</h1>
-            <a href="dashboard.php" class="btn">Back to Dashboard</a>
+
+<div class="row">
+    <!-- Event Details Column -->
+    <div class="col-xl-7">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Manage Event: <?php echo htmlspecialchars($event->title); ?></h4>
+            </div>
+            <div class="card-body">
+                <!-- In a future step, we can make this form editable -->
+                <p><strong>Status:</strong> <span class="badge light badge-primary"><?php echo htmlspecialchars($event->status); ?></span></p>
+                <p><strong>Date:</strong> <?php echo date('F j, Y, g:i a', strtotime($event->date)); ?></p>
+                <p><strong>Location:</strong> <?php echo htmlspecialchars($event->location); ?></p>
+                <p><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($event->description)); ?></p>
+                <?php if ($event->banner): ?>
+                    <p><strong>Banner:</strong></p>
+                    <img src="<?php echo htmlspecialchars($event->banner); ?>" alt="Event Banner" class="img-fluid rounded">
+                <?php endif; ?>
+            </div>
         </div>
 
-        <?php
-        if (isset($_SESSION['success_message'])) {
-            echo '<div class="message success">' . $_SESSION['success_message'] . '</div>';
-            unset($_SESSION['success_message']);
-        }
-        if (isset($_SESSION['error_message'])) {
-            echo '<div class="message error">' . $_SESSION['error_message'] . '</div>';
-            unset($_SESSION['error_message']);
-        }
-        ?>
-
-        <h2><?php echo htmlspecialchars($event->title); ?></h2>
-        <p><strong>Date:</strong> <?php echo htmlspecialchars($event->date); ?></p>
-        <p><strong>Location:</strong> <?php echo htmlspecialchars($event->location); ?></p>
-
-        <div class="section">
-            <h3>Ticket Types</h3>
-            <?php if (!empty($tickets)): ?>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Ticket Name</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($tickets as $ticket): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($ticket->name); ?></td>
-                                <td>$<?php echo htmlspecialchars(number_format($ticket->price, 2)); ?></td>
-                                <td><?php echo htmlspecialchars($ticket->quantity); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <p>No ticket types have been added for this event yet.</p>
-            <?php endif; ?>
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Existing Ticket Types</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <?php if (!empty($tickets)): ?>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Ticket Name</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($tickets as $ticket): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($ticket->name); ?></td>
+                                        <td>$<?php echo htmlspecialchars(number_format($ticket->price, 2)); ?></td>
+                                        <td><?php echo htmlspecialchars($ticket->quantity); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <p>No ticket types have been added for this event yet.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
-
-        <div class="section">
-            <h3>Add New Ticket Type</h3>
-            <form action="handle-add-ticket.php" method="POST">
-                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                <input type="hidden" name="event_id" value="<?php echo $event->id; ?>">
-                <div class="form-group">
-                    <label for="name">Ticket Name (e.g., General Admission, VIP)</label>
-                    <input type="text" id="name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="price">Price ($)</label>
-                    <input type="number" id="price" name="price" min="0" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="quantity">Quantity Available</label>
-                    <input type="number" id="quantity" name="quantity" min="1" required>
-                </div>
-                <button type="submit" class="btn">Add Ticket</button>
-            </form>
-        </div>
-
     </div>
-</body>
-</html>
+
+    <!-- Add Ticket Column -->
+    <div class="col-xl-5">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Add New Ticket Type</h4>
+            </div>
+            <div class="card-body">
+                <div id="add-ticket-error" class="alert alert-danger" style="display: none;"></div>
+                <div id="add-ticket-success" class="alert alert-success" style="display: none;"></div>
+
+                <form id="add-ticket-form" method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo CSRF::generateToken('add_ticket_form'); ?>">
+                    <input type="hidden" name="event_id" value="<?php echo $event->id; ?>">
+
+                    <div class="mb-3">
+                        <label class="form-label">Ticket Name (e.g., General Admission, VIP)</label>
+                        <input type="text" class="form-control" name="name" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price ($)</label>
+                        <input type="number" class="form-control" name="price" min="0" step="0.01" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity Available</label>
+                        <input type="number" class="form-control" name="quantity" min="1" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <button type="submit" id="add-ticket-button" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                        Add Ticket
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/event.js"></script>
+
+<?php
+require_once __DIR__ . '/includes/footer-auth.php';
+?>

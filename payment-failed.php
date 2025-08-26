@@ -1,33 +1,39 @@
 <?php
-session_start();
+require_once __DIR__ . '/bootstrap.php';
 
 $reference = filter_input(INPUT_GET, 'ref', FILTER_SANITIZE_STRING);
-$error_message = $_SESSION['error_message'] ?? "An unknown error occurred.";
+$error_message = $_SESSION['error_message'] ?? "An unknown error occurred, or the payment was cancelled.";
 unset($_SESSION['error_message']); // Clear the message after displaying it
 
+$page_title = "Payment Failed";
+require_once __DIR__ . '/includes/header-public.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Payment Failed</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
-        .container { max-width: 600px; margin: auto; }
-        .error-icon { color: red; font-size: 5em; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="error-icon">&#10060;</div>
-        <h1>Payment Failed</h1>
-        <p>Unfortunately, we were unable to process your payment.</p>
-        <p><strong>Reason:</strong> <?php echo htmlspecialchars($error_message); ?></p>
-        <?php if ($reference): ?>
-            <p>You can try the payment again for reference: <strong><?php echo htmlspecialchars($reference); ?></strong></p>
-            <p><a href="order-confirmation.php?ref=<?php echo htmlspecialchars($reference); ?>">Try Again</a></p>
-        <?php endif; ?>
-        <p><a href="index.php">Back to Homepage</a></p>
+
+<div class="container my-5">
+    <div class="row d-flex justify-content-center">
+        <div class="col-lg-8 text-center">
+            <div class="card">
+                <div class="card-body">
+                    <i class="fa fa-times-circle text-danger" style="font-size: 80px; margin-bottom: 20px;"></i>
+                    <h1 class="card-title">Payment Failed</h1>
+                    <p class="lead">Unfortunately, we were unable to process your payment.</p>
+
+                    <div class="alert alert-warning">
+                        <strong>Reason:</strong> <?php echo htmlspecialchars($error_message); ?>
+                    </div>
+
+                    <?php if ($reference): ?>
+                        <p>You can try the payment again for your order.</p>
+                        <a href="order-confirmation.php?ref=<?php echo urlencode($reference); ?>" class="btn btn-primary btn-lg mt-3">Try Again</a>
+                    <?php endif; ?>
+
+                    <p class="mt-4"><a href="index.php">Back to Homepage</a></p>
+                </div>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+</div>
+
+<?php
+require_once __DIR__ . '/includes/footer-public.php';
+?>
